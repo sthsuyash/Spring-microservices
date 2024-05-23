@@ -1,0 +1,8 @@
+server:
+  port: 8088
+
+spring:
+  application:
+    name: config-server
+  profiles:
+    active: native # by default, it is git. Native is used for local file system
