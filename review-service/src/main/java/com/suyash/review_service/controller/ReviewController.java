@@ -44,4 +44,9 @@ public class ReviewController {
     public ApiResponse<Void> deleteReview(@PathVariable Long id) {
         return reviewService.deleteReview(id);
     }
+
+    @GetMapping("/average-rating")
+    public ResponseEntity<ApiResponse<Double>> getAverageRating(@RequestParam Long employeeId) {
+        return ResponseEntity.ok(reviewService.getAverageRating(employeeId));
+    }
 }

@@ -1,4 +1,4 @@
-package com.suyash.review_service.config;
+package com.suyash.employeeservice.config;
 
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;

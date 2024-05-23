@@ -12,4 +12,7 @@ import java.util.List;
 public interface ReviewClient {
     @GetMapping("/reviews")
     ApiResponse<List<ReviewDTO>> getReviewByEmployeeId(@RequestParam("employeeId") Long employeeId);
+
+    @GetMapping("/reviews/average-rating")
+    ApiResponse<Double> getAverageRating(@RequestParam("employeeId") Long employeeId);
 }

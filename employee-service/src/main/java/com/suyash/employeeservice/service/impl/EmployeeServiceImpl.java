@@ -1,13 +1,16 @@
 package com.suyash.employeeservice.service.impl;
 
+import com.suyash.employeeservice.client.ReviewClient;
 import com.suyash.employeeservice.dto.ApiResponse;
 import com.suyash.employeeservice.dto.EmployeeRequestDTO;
 import com.suyash.employeeservice.dto.EmployeeResponseDTO;
+import com.suyash.employeeservice.dto.ReviewMessageDTO;
 import com.suyash.employeeservice.exception.ResourceNotFoundException;
 import com.suyash.employeeservice.mapper.EmployeeMapper;
 import com.suyash.employeeservice.model.Employee;
 import com.suyash.employeeservice.repository.EmployeeRepository;
 import com.suyash.employeeservice.service.EmployeeService;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -23,16 +26,19 @@ public class EmployeeServiceImpl implements EmployeeService {
     private static final Logger logger = LoggerFactory.getLogger(EmployeeServiceImpl.class);
     private final EmployeeRepository employeeRepository;
     private final EmployeeMapper employeeMapper;
+    private ReviewClient reviewClient;
 
     /**
      * Constructor for EmployeeServiceImpl.
      *
      * @param employeeRepository The employee repository
      * @param employeeMapper     The EmployeeMapper for mapping entities and DTOs
+     * @param reviewClient       The ReviewClient for making requests to the review service
      */
-    public EmployeeServiceImpl(EmployeeRepository employeeRepository, EmployeeMapper employeeMapper) {
+    public EmployeeServiceImpl(EmployeeRepository employeeRepository, EmployeeMapper employeeMapper, ReviewClient reviewClient) {
         this.employeeRepository = employeeRepository;
         this.employeeMapper = employeeMapper;
+        this.reviewClient = reviewClient;
     }
 
     /**
@@ -41,6 +47,7 @@ public class EmployeeServiceImpl implements EmployeeService {
      * @return ApiResponse containing a list of EmployeeResponseDTO objects
      */
     @Override
+    @RateLimiter(name = "default", fallbackMethod = "defaultFallback")
     public ApiResponse<List<EmployeeResponseDTO>> findAllEmployees() {
         List<EmployeeResponseDTO> employees = employeeRepository.findAll()
                 .stream()
@@ -56,6 +63,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         return new ApiResponse<>(true, "Employees retrieved successfully", employees);
     }
 
+
     /**
      * Creates a new employee.
      *
@@ -63,6 +71,7 @@ public class EmployeeServiceImpl implements EmployeeService {
      * @return ApiResponse containing the created EmployeeResponseDTO object
      */
     @Override
+    @RateLimiter(name = "default", fallbackMethod = "defaultFallback")
     public ApiResponse<EmployeeResponseDTO> createEmployee(EmployeeRequestDTO employeeRequestDTO) {
         Employee employee = new Employee(
                 employeeRequestDTO.getFirstName(),
@@ -85,6 +94,7 @@ public class EmployeeServiceImpl implements EmployeeService {
      * @return ApiResponse containing the retrieved EmployeeResponseDTO object
      */
     @Override
+    @RateLimiter(name = "default", fallbackMethod = "defaultFallback")
     public ApiResponse<EmployeeResponseDTO> findEmployeeById(Long id) {
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + id));
@@ -97,11 +107,12 @@ public class EmployeeServiceImpl implements EmployeeService {
     /**
      * Updates an existing employee.
      *
-     * @param id                  The ID of the employee to update
-     * @param employeeRequestDTO  The updated employee details
+     * @param id                 The ID of the employee to update
+     * @param employeeRequestDTO The updated employee details
      * @return ApiResponse containing the updated EmployeeResponseDTO object
      */
     @Override
+    @RateLimiter(name = "default", fallbackMethod = "defaultFallback")
     public ApiResponse<EmployeeResponseDTO> updateEmployee(Long id, EmployeeRequestDTO employeeRequestDTO) {
         Employee existingEmployee = employeeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + id));
@@ -119,6 +130,31 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     /**
+     * Updates the rating of an employee.
+     *
+     * @param reviewMessageDTO The review message containing the employee ID and rating
+     * @return ApiResponse indicating the success or failure of the update operation
+     */
+    @Override
+    public ApiResponse<Void> updateEmployeeRating(ReviewMessageDTO reviewMessageDTO) {
+        Employee existingEmployee = employeeRepository.findById(reviewMessageDTO.getEmployeeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + reviewMessageDTO.getEmployeeId()));
+
+        ApiResponse<Double> apiResponse = reviewClient.getAverageRating(reviewMessageDTO.getEmployeeId());
+        if (!apiResponse.isSuccess()) {
+            logger.error("Error occurred while fetching average rating: {}", apiResponse.getMessage());
+            return new ApiResponse<>(false, "Error occurred while fetching average rating", null);
+        }
+
+        Double averageRating = apiResponse.getData();
+        existingEmployee.setAverageRating(averageRating);
+        employeeRepository.save(existingEmployee);
+        logger.info("Updated Employee Rating: {}", existingEmployee);
+
+        return new ApiResponse<>(true, "Employee rating updated successfully", null);
+    }
+
+    /**
      * Deletes an employee by their ID.
      *
      * @param id The ID of the employee to delete
@@ -131,5 +167,10 @@ public class EmployeeServiceImpl implements EmployeeService {
         employeeRepository.delete(existingEmployee);
         logger.info("Deleted Employee: {}", existingEmployee);
         return new ApiResponse<>(true, "Employee deleted successfully", null);
+    }
+
+    public ApiResponse<?> defaultFallback(Exception e) {
+        logger.error("Error occurred while fetching employees: {}", e.getMessage());
+        return new ApiResponse<>(false, "Error occurred while fetching employees", null);
     }
 }

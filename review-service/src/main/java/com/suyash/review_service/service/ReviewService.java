@@ -18,4 +18,6 @@ public interface ReviewService {
     ApiResponse<ReviewResponseDTO> updateReview(Long id, ReviewRequestDTO employeeRequestDTO);
 
     ApiResponse<Void> deleteReview(Long id);
+
+    ApiResponse<Double> getAverageRating(Long employeeId);
 }

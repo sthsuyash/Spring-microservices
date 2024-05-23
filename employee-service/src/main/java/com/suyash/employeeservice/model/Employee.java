@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Entity
 public class Employee {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @Column(nullable = false)
     private String firstName;
@@ -20,6 +20,7 @@ public class Employee {
     @Column(unique = true, nullable = false)
     private String email;
     private Long departmentId;
+    private double averageRating;
 
     public Employee(String firstName, String lastName, String email, Long departmentId) {
         this.firstName = firstName;

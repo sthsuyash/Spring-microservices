@@ -46,6 +46,7 @@ public class EmployeeMapper {
         responseDTO.setFirstName(employee.getFirstName());
         responseDTO.setLastName(employee.getLastName());
         responseDTO.setEmail(employee.getEmail());
+        responseDTO.setAverageRating(employee.getAverageRating());
 
         // Request Department information from Department microservice
         DepartmentDTO departmentDTO = fetchDepartmentInfo(employee.getDepartmentId());

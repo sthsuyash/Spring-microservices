@@ -1,4 +1,4 @@
-package com.suyash.review_service.dto;
+package com.suyash.employeeservice.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

@@ -14,6 +14,7 @@ public class EmployeeResponseDTO {
     private String firstName;
     private String lastName;
     private String email;
+    private Double averageRating;
     private DepartmentDTO department;
     private List<ReviewDTO> review;
 }

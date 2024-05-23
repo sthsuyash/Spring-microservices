@@ -1,6 +1,8 @@
+# Server configuration for the employee-service:
 server:
   port: 8081
 
+# Eureka configuration for the employee-service:
 eureka:
   client:
     register-with-eureka: true
@@ -13,7 +15,18 @@ management:
   tracing:
     sampling:
       probability: 1.0
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
+  health:
+    circuitbreakers:
+      enabled: true
 
+# Spring configuration for the PostgreSQL database:
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5433/employeedb
@@ -28,3 +41,18 @@ spring:
     properties:
       hibernate:
       dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+# Resilience4j
+resilience4j:
+  ratelimiter:
+    instances:
+      default:
+        timeoutDuration: 0
+        limitRefreshPeriod: 4
+        limitForPeriod: 2

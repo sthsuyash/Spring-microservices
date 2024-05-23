@@ -5,6 +5,7 @@ import com.suyash.review_service.dto.ReviewRequestDTO;
 import com.suyash.review_service.dto.ReviewResponseDTO;
 import com.suyash.review_service.exception.ResourceNotFoundException;
 import com.suyash.review_service.mapper.ReviewMapper;
+import com.suyash.review_service.message.ReviewMessageProducer;
 import com.suyash.review_service.model.Review;
 import com.suyash.review_service.repository.ReviewRepository;
 import com.suyash.review_service.service.ReviewService;
@@ -23,15 +24,19 @@ public class ReviewServiceImpl implements ReviewService {
     private static final Logger logger = LoggerFactory.getLogger(ReviewServiceImpl.class);
     private final ReviewRepository reviewRepository;
     private final ReviewMapper reviewMapper;
+    private final ReviewMessageProducer reviewMessageProducer;
 
     /**
      * Constructor for ReviewServiceImpl.
      *
-     * @param reviewRepository The review repository
+     * @param reviewRepository      The review repository
+     * @param reviewMapper          The ReviewMapper for mapping entities and DTOs
+     * @param reviewMessageProducer The ReviewMessageProducer for sending messages to the RabbitMQ queue
      */
-    public ReviewServiceImpl(ReviewRepository reviewRepository, ReviewMapper reviewMapper) {
+    public ReviewServiceImpl(ReviewRepository reviewRepository, ReviewMapper reviewMapper, ReviewMessageProducer reviewMessageProducer) {
         this.reviewRepository = reviewRepository;
         this.reviewMapper = reviewMapper;
+        this.reviewMessageProducer = reviewMessageProducer;
     }
 
     /**
@@ -81,6 +86,8 @@ public class ReviewServiceImpl implements ReviewService {
 
         ReviewResponseDTO responseDTO = reviewMapper.mapToReviewResponseDTO(savedReview);
 
+        reviewMessageProducer.sendMessage(responseDTO);
+
         return new ApiResponse<>(true, "Review created successfully", responseDTO);
     }
 
@@ -103,8 +110,8 @@ public class ReviewServiceImpl implements ReviewService {
     /**
      * Updates an existing review.
      *
-     * @param id                  The ID of the review to update
-     * @param reviewRequestDTO  The updated review details
+     * @param id               The ID of the review to update
+     * @param reviewRequestDTO The updated review details
      * @return ApiResponse containing the updated ReviewResponseDTO object
      */
     @Override
@@ -137,5 +144,28 @@ public class ReviewServiceImpl implements ReviewService {
         reviewRepository.delete(existingReview);
         logger.info("Deleted Review: {}", existingReview);
         return new ApiResponse<>(true, "Review deleted successfully", null);
+    }
+
+    /**
+     * Retrieves the average rating of an employee.
+     *
+     * @param employeeId The ID of the employee
+     * @return ApiResponse containing the average rating
+     */
+    @Override
+    public ApiResponse<Double> getAverageRating(Long employeeId) {
+        List<Review> reviews = reviewRepository.findByEmployeeId(employeeId);
+        if (reviews.isEmpty()) {
+            logger.info("No reviews found for employee with ID: {}", employeeId);
+            return new ApiResponse<>(false, "No reviews found for employee with ID: " + employeeId, null);
+        }
+
+        double averageRating = reviews.stream()
+                .mapToDouble(Review::getRating)
+                .average()
+                .orElse(0.0);
+
+        logger.info("Average Rating: {}", averageRating);
+        return new ApiResponse<>(true, "Average rating retrieved successfully", averageRating);
     }
 }
