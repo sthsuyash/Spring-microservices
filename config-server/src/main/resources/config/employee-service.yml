@@ -9,6 +9,8 @@ eureka:
     fetch-registry: true
     service-url:
       defaultZone: http://localhost:8761/eureka/
+  instance:
+    hostname: localhost
 
 # enable tracing in the department-service:
 management:
@@ -22,9 +24,6 @@ management:
   endpoint:
     health:
       show-details: always
-  health:
-    circuitbreakers:
-      enabled: true
 
 # Spring configuration for the PostgreSQL database:
 spring:
@@ -47,12 +46,3 @@ spring:
     port: 5672
     username: guest
     password: guest
-
-# Resilience4j
-resilience4j:
-  ratelimiter:
-    instances:
-      default:
-        timeoutDuration: 0
-        limitRefreshPeriod: 4
-        limitForPeriod: 2

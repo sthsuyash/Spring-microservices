@@ -11,7 +11,7 @@ import java.util.List;
 
 @Service
 public interface EmployeeService {
-    ApiResponse<List<EmployeeResponseDTO>> findAllEmployees();
+    ApiResponse<List<EmployeeResponseDTO>> findAllEmployees(Long departmentId);
 
     ApiResponse<EmployeeResponseDTO> createEmployee(EmployeeRequestDTO employeeRequestDTO);
 
@@ -22,4 +22,6 @@ public interface EmployeeService {
     ApiResponse<Void> updateEmployeeRating(ReviewMessageDTO reviewMessageDTO);
 
     ApiResponse<Void> deleteEmployee(Long id);
+
+    ApiResponse<Boolean> existsById(Long id);
 }

@@ -3,6 +3,7 @@ package com.suyash.departmentservice.controller;
 import com.suyash.departmentservice.dto.ApiResponse;
 import com.suyash.departmentservice.dto.DepartmentRequestDTO;
 import com.suyash.departmentservice.dto.DepartmentResponseDTO;
+import com.suyash.departmentservice.dto.EmployeeResponseDTO;
 import com.suyash.departmentservice.service.DepartmentService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,5 +44,15 @@ public class DepartmentController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public ApiResponse<Void> deleteDepartment(@PathVariable Long id) {
         return departmentService.deleteDepartment(id);
+    }
+
+    @GetMapping("/employees/{name}")
+    public ResponseEntity<ApiResponse<List<EmployeeResponseDTO>>> getEmployeesByDepartmentName(@PathVariable String name) {
+        return ResponseEntity.ok(departmentService.findEmployeesByDepartmentName(name));
+    }
+
+    @GetMapping("/{id}/exists")
+    public ApiResponse<Boolean> departmentExists(@PathVariable Long id) {
+        return departmentService.departmentExists(id);
     }
 }

@@ -1,40 +1,14 @@
 server:
   port: 8084
 
-spring:
-  cloud:
-    gateway:
-      mvc:
-        routes:
-          - id: employee-service
-            uri: lb://employee-service
-            predicates:
-              - Path=/employees/**
-          - id: department-service
-            uri: lb://department-service
-            predicates:
-              - Path=/departments/**
-          - id: review-service
-            uri: lb://review-service
-            predicates:
-              - Path=/reviews/**
-          - id: eureka-server
-            uri: http://localhost:8761
-            predicates:
-              - Path=/eureka/main
-            filters:
-              - RewritePath=/eureka/(?<segment>.*), /$\{segment}
-          - id: eureka-server-static
-            uri: http://localhost:8761
-            predicates:
-              - Path=/eureka/**
-
 eureka:
   client:
     register-with-eureka: true
     fetch-registry: true
     service-url:
       defaultZone: http://localhost:8761/eureka/
+  instance:
+    hostname: localhost
 
 # enable tracing in the department-service:
 management:

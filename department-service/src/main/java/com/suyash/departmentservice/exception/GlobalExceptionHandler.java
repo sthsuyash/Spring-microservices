@@ -32,6 +32,20 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles DepartmentAlreadyExistsException.
+     *
+     * @param ex      The DepartmentAlreadyExistsException instance
+     * @param request The WebRequest instance
+     * @return ResponseEntity with an error message and HTTP status 409
+     */
+    @ExceptionHandler(DepartmentAlreadyExistsException.class)
+    public ResponseEntity<?> handleDepartmentAlreadyExistsException(DepartmentAlreadyExistsException ex, WebRequest request) {
+        logger.error("DepartmentAlreadyExistsException: {}", ex.getMessage(), ex);
+        ApiResponse<String> response = new ApiResponse<>(false, ex.getMessage(), null);
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+    }
+
+    /**
      * Handles IllegalArgumentException.
      *
      * @param ex      The IllegalArgumentException instance

@@ -3,6 +3,7 @@ package com.suyash.departmentservice.service;
 import com.suyash.departmentservice.dto.ApiResponse;
 import com.suyash.departmentservice.dto.DepartmentRequestDTO;
 import com.suyash.departmentservice.dto.DepartmentResponseDTO;
+import com.suyash.departmentservice.dto.EmployeeResponseDTO;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,4 +19,8 @@ public interface DepartmentService {
     ApiResponse<DepartmentResponseDTO> updateDepartment(Long id, DepartmentRequestDTO employeeRequestDTO);
 
     ApiResponse<Void> deleteDepartment(Long id);
+
+    ApiResponse<Boolean> departmentExists(Long id);
+
+    ApiResponse<List<EmployeeResponseDTO>> findEmployeesByDepartmentName(String name);
 }

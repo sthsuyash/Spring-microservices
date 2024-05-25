@@ -20,8 +20,8 @@ public class EmployeeController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<EmployeeResponseDTO>>> getAllEmployees() {
-        return ResponseEntity.ok(employeeService.findAllEmployees());
+    public ResponseEntity<ApiResponse<List<EmployeeResponseDTO>>> getAllEmployees(@RequestParam(required = false) Long departmentId) {
+        return ResponseEntity.ok(employeeService.findAllEmployees(departmentId));
     }
 
     @PostMapping
@@ -43,5 +43,10 @@ public class EmployeeController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public ApiResponse<Void> deleteEmployee(@PathVariable Long id) {
         return employeeService.deleteEmployee(id);
+    }
+
+    @GetMapping("/exists/{id}")
+    public ApiResponse<Boolean> existsById(@PathVariable Long id) {
+        return employeeService.existsById(id);
     }
 }

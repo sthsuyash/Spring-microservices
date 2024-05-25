@@ -1,9 +1,12 @@
 package com.suyash.review_service.service.impl;
 
+import com.suyash.review_service.client.EmployeeClient;
 import com.suyash.review_service.dto.ApiResponse;
 import com.suyash.review_service.dto.ReviewRequestDTO;
 import com.suyash.review_service.dto.ReviewResponseDTO;
+import com.suyash.review_service.exception.EmployeeNotFoundException;
 import com.suyash.review_service.exception.ResourceNotFoundException;
+import com.suyash.review_service.exception.ReviewNotFoundException;
 import com.suyash.review_service.mapper.ReviewMapper;
 import com.suyash.review_service.message.ReviewMessageProducer;
 import com.suyash.review_service.model.Review;
@@ -21,10 +24,11 @@ import java.util.stream.Collectors;
  */
 @Component
 public class ReviewServiceImpl implements ReviewService {
-    private static final Logger logger = LoggerFactory.getLogger(ReviewServiceImpl.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ReviewServiceImpl.class);
     private final ReviewRepository reviewRepository;
     private final ReviewMapper reviewMapper;
     private final ReviewMessageProducer reviewMessageProducer;
+    private final EmployeeClient employeeClient;
 
     /**
      * Constructor for ReviewServiceImpl.
@@ -33,10 +37,16 @@ public class ReviewServiceImpl implements ReviewService {
      * @param reviewMapper          The ReviewMapper for mapping entities and DTOs
      * @param reviewMessageProducer The ReviewMessageProducer for sending messages to the RabbitMQ queue
      */
-    public ReviewServiceImpl(ReviewRepository reviewRepository, ReviewMapper reviewMapper, ReviewMessageProducer reviewMessageProducer) {
+    public ReviewServiceImpl(
+            ReviewRepository reviewRepository,
+            ReviewMapper reviewMapper,
+            ReviewMessageProducer reviewMessageProducer,
+            EmployeeClient employeeClient
+    ) {
         this.reviewRepository = reviewRepository;
         this.reviewMapper = reviewMapper;
         this.reviewMessageProducer = reviewMessageProducer;
+        this.employeeClient = employeeClient;
     }
 
     /**
@@ -47,17 +57,23 @@ public class ReviewServiceImpl implements ReviewService {
      */
     @Override
     public ApiResponse<List<ReviewResponseDTO>> findReviewsByEmployeeId(Long employeeId) {
+        // check if the employeeId is not null
+        if (employeeId == null) {
+            LOGGER.error("Employee ID cannot be null");
+            return new ApiResponse<>(false, "Employee ID cannot be null", null);
+        }
+
         List<ReviewResponseDTO> reviews = reviewRepository.findByEmployeeId(employeeId)
                 .stream()
                 .map(reviewMapper::mapToReviewResponseDTO)
                 .collect(Collectors.toList());
 
         if (reviews.isEmpty()) {
-            logger.info("No reviews found for employee with ID: {}", employeeId);
-            return new ApiResponse<>(false, "No reviews found for employee with ID: " + employeeId, null);
+            LOGGER.info("No reviews found for employee with ID: {}", employeeId);
+            return new ApiResponse<>(true, "No reviews found for employee with ID: " + employeeId, null);
         }
 
-        logger.info("Retrieved Reviews: {}", reviews);
+        LOGGER.info("Retrieved Reviews");
         return new ApiResponse<>(true, "Reviews retrieved successfully", reviews);
     }
 
@@ -71,8 +87,20 @@ public class ReviewServiceImpl implements ReviewService {
     public ApiResponse<ReviewResponseDTO> createReview(Long employeeId, ReviewRequestDTO reviewRequestDTO) {
         // check if the employeeId is not null
         if (employeeId == null) {
-            logger.error("Employee ID cannot be null");
+            LOGGER.error("Employee ID cannot be null");
             return new ApiResponse<>(false, "Employee ID cannot be null", null);
+        }
+
+        // check if the employee exists
+        ApiResponse<Boolean> apiResponse = employeeClient.existsById(employeeId);
+        if (!apiResponse.isSuccess()) {
+            LOGGER.error("Failed to check if employee with ID: {} exists", employeeId);
+            return new ApiResponse<>(false, "Failed to check if employee exists", null);
+        }
+
+        if (!apiResponse.getData()) {
+            LOGGER.error("Employee with ID: {} does not exist", employeeId);
+            throw new EmployeeNotFoundException("Employee not found with ID: " + employeeId);
         }
 
         Review review = new Review(
@@ -82,7 +110,7 @@ public class ReviewServiceImpl implements ReviewService {
         );
         review.setEmployeeId(employeeId);
         Review savedReview = reviewRepository.save(review);
-        logger.info("Created Review: {}", savedReview);
+        LOGGER.info("Created Review: {}", savedReview);
 
         ReviewResponseDTO responseDTO = reviewMapper.mapToReviewResponseDTO(savedReview);
 
@@ -100,9 +128,12 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     public ApiResponse<ReviewResponseDTO> findReviewById(Long id) {
         Review review = reviewRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Review not found with id: " + id));
+                .orElseThrow(() -> {
+                    LOGGER.error("Review not found with id: {}", id);
+                    return new ReviewNotFoundException("Review not found with id: " + id);
+                });
 
-        logger.info("Retrieved Review: {}", review);
+        LOGGER.info("Retrieved Review: {}", review);
         ReviewResponseDTO responseDTO = reviewMapper.mapToReviewResponseDTO(review);
         return new ApiResponse<>(true, "Review retrieved successfully", responseDTO);
     }
@@ -117,7 +148,10 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     public ApiResponse<ReviewResponseDTO> updateReview(Long id, ReviewRequestDTO reviewRequestDTO) {
         Review existingReview = reviewRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Review not found with id: " + id));
+                .orElseThrow(() -> {
+                    LOGGER.error("Review not found with id: {}", id);
+                    return new ReviewNotFoundException("Review not found with id: " + id);
+                });
 
         existingReview.setTitle(reviewRequestDTO.getTitle());
         existingReview.setDescription(reviewRequestDTO.getDescription());
@@ -125,7 +159,7 @@ public class ReviewServiceImpl implements ReviewService {
         existingReview.setEmployeeId(existingReview.getEmployeeId());
 
         Review updatedReview = reviewRepository.save(existingReview);
-        logger.info("Updated Review: {}", updatedReview);
+        LOGGER.info("Updated Review: {}", updatedReview);
 
         ReviewResponseDTO responseDTO = reviewMapper.mapToReviewResponseDTO(updatedReview);
         return new ApiResponse<>(true, "Review updated successfully", responseDTO);
@@ -140,9 +174,12 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     public ApiResponse<Void> deleteReview(Long id) {
         Review existingReview = reviewRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Review not found with id: " + id));
+                .orElseThrow(() -> {
+                    LOGGER.error("Review not found with id: {}", id);
+                    return new ReviewNotFoundException("Review not found with id: " + id);
+                });
         reviewRepository.delete(existingReview);
-        logger.info("Deleted Review: {}", existingReview);
+        LOGGER.info("Deleted Review: {}", existingReview);
         return new ApiResponse<>(true, "Review deleted successfully", null);
     }
 
@@ -156,8 +193,8 @@ public class ReviewServiceImpl implements ReviewService {
     public ApiResponse<Double> getAverageRating(Long employeeId) {
         List<Review> reviews = reviewRepository.findByEmployeeId(employeeId);
         if (reviews.isEmpty()) {
-            logger.info("No reviews found for employee with ID: {}", employeeId);
-            return new ApiResponse<>(false, "No reviews found for employee with ID: " + employeeId, null);
+            LOGGER.info("No reviews found for employee with ID: {}", employeeId);
+            throw new ReviewNotFoundException("No reviews found for employee with ID: " + employeeId);
         }
 
         double averageRating = reviews.stream()
@@ -165,7 +202,7 @@ public class ReviewServiceImpl implements ReviewService {
                 .average()
                 .orElse(0.0);
 
-        logger.info("Average Rating: {}", averageRating);
+        LOGGER.info("Average Rating: {}", averageRating);
         return new ApiResponse<>(true, "Average rating retrieved successfully", averageRating);
     }
 }

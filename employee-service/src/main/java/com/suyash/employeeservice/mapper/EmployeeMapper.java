@@ -19,7 +19,7 @@ import java.util.List;
  */
 @Component
 public class EmployeeMapper {
-    private static final Logger logger = LoggerFactory.getLogger(EmployeeMapper.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(EmployeeMapper.class);
     private final DepartmentClient departmentClient;
     private final ReviewClient reviewClient;
 
@@ -69,10 +69,10 @@ public class EmployeeMapper {
         ApiResponse<DepartmentDTO> apiResponse = departmentClient.getDepartment(departmentId);
         if (apiResponse != null && apiResponse.isSuccess()) {
             DepartmentDTO departmentDTO = apiResponse.getData();
-            logger.info("Fetched Department information: {}", departmentDTO);
+            LOGGER.info("Fetched Department information: {}", departmentDTO);
             return departmentDTO;
         } else {
-            logger.error("Failed to fetch department information for departmentId {}", departmentId);
+            LOGGER.error("Failed to fetch department information for departmentId {}", departmentId);
             return null;
         }
     }
@@ -87,10 +87,10 @@ public class EmployeeMapper {
         ApiResponse<List<ReviewDTO>> apiResponse = reviewClient.getReviewByEmployeeId(employeeId);
         if (apiResponse != null && apiResponse.isSuccess()) {
             List<ReviewDTO> reviewDTOList = apiResponse.getData();
-            logger.info("Fetched Review information: {}", reviewDTOList);
+            LOGGER.info("Fetched Review information: {}", reviewDTOList);
             return reviewDTOList;
         } else {
-            logger.error("Failed to fetch review information for employeeId {}", employeeId);
+            LOGGER.error("Failed to fetch review information for employeeId {}", employeeId);
             return Collections.emptyList();
         }
     }
