@@ -41,3 +41,12 @@ management:
   tracing:
     sampling:
       probability: 1.0
+
+# okta configuration for api-gateway
+okta:
+  oauth2:
+    issuer: https://dev-49598244.okta.com/oauth2/default
+    audience: api://default
+    client-id: 0oahazdi0bawyl63x5d7
+    client-secret: nELePEtm1uxIq4RjeTyYIQ2najkThHR36XolBavQnYCcRUJy1VjpHv0fVwTloeJ2
+    scopes: openid, profile, email, offline_access
