@@ -4,6 +4,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * DTO for request to department endpoint.
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

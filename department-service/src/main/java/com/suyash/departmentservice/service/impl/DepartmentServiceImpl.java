@@ -1,10 +1,7 @@
 package com.suyash.departmentservice.service.impl;
 
 import com.suyash.departmentservice.client.EmployeeClient;
-import com.suyash.departmentservice.dto.ApiResponse;
-import com.suyash.departmentservice.dto.DepartmentRequestDTO;
-import com.suyash.departmentservice.dto.DepartmentResponseDTO;
-import com.suyash.departmentservice.dto.EmployeeResponseDTO;
+import com.suyash.departmentservice.dto.*;
 import com.suyash.departmentservice.exception.*;
 import com.suyash.departmentservice.mapper.DepartmentMapper;
 import com.suyash.departmentservice.model.Department;
@@ -16,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -33,6 +31,8 @@ public class DepartmentServiceImpl implements DepartmentService {
      * Constructor for DepartmentServiceImpl.
      *
      * @param departmentRepository The department repository
+     * @param departmentMapper     The department mapper
+     * @param employeeClient       The employee client
      */
     public DepartmentServiceImpl(
             DepartmentRepository departmentRepository,
@@ -58,7 +58,7 @@ public class DepartmentServiceImpl implements DepartmentService {
 
         if (departments.isEmpty()) {
             LOGGER.error("No departments found");
-            return new ApiResponse<>(true, "No departments found", null);
+            return new ApiResponse<>(false, "No departments found", null);
         }
 
         LOGGER.info("Retrieved Departments");
@@ -73,11 +73,12 @@ public class DepartmentServiceImpl implements DepartmentService {
      */
     @Override
     public ApiResponse<DepartmentResponseDTO> createDepartment(DepartmentRequestDTO departmentRequestDTO) {
-        // check if department with the same name already exists
+        Objects.requireNonNull(departmentRequestDTO, "DepartmentRequestDTO must not be null");
+
         if (departmentRepository.existsByName(departmentRequestDTO.getName())) {
-            LOGGER.error("Department with name {} already exists", departmentRequestDTO.getName());
             throw new DepartmentAlreadyExistsException("Department with name " + departmentRequestDTO.getName() + " already exists");
         }
+
         Department department = new Department(departmentRequestDTO.getName());
         Department savedDepartment = departmentRepository.save(department);
         LOGGER.info("Created Department: {}", savedDepartment);
@@ -92,11 +93,10 @@ public class DepartmentServiceImpl implements DepartmentService {
      */
     @Override
     public ApiResponse<DepartmentResponseDTO> findDepartmentById(Long id) {
+        Objects.requireNonNull(id, "Department ID must not be null");
+
         Department department = departmentRepository.findById(id)
-                .orElseThrow(() -> {
-                    LOGGER.error("Department not found with id: {}", id);
-                    return new DepartmentNotFoundException("Department not found with id: " + id);
-                });
+                .orElseThrow(() -> new DepartmentNotFoundException("Department not found with id: " + id));
         return new ApiResponse<>(true, "Department retrieved successfully", departmentMapper.mapToDepartmentResponseDTO(department));
     }
 
@@ -109,11 +109,10 @@ public class DepartmentServiceImpl implements DepartmentService {
      */
     @Override
     public ApiResponse<DepartmentResponseDTO> updateDepartment(Long id, DepartmentRequestDTO departmentRequestDTO) {
+        Objects.requireNonNull(id, "Department ID must not be null");
+
         Department existingDepartment = departmentRepository.findById(id)
-                .orElseThrow(() -> {
-                    LOGGER.error("Department not found with id: {}", id);
-                    return new DepartmentNotFoundException("Department not found with id: " + id);
-                });
+                .orElseThrow(() -> new DepartmentNotFoundException("Department not found with id: " + id));
 
         existingDepartment.setName(departmentRequestDTO.getName());
         Department updatedDepartment = departmentRepository.save(existingDepartment);
@@ -129,11 +128,11 @@ public class DepartmentServiceImpl implements DepartmentService {
      */
     @Override
     public ApiResponse<Void> deleteDepartment(Long id) {
+        Objects.requireNonNull(id, "Department ID must not be null");
+
         Department existingDepartment = departmentRepository.findById(id)
-                .orElseThrow(() -> {
-                    LOGGER.error("Department not found with id: {}", id);
-                    return new DepartmentNotFoundException("Department not found with id: " + id);
-                });
+                .orElseThrow(() ->  new DepartmentNotFoundException("Department not found with id: " + id));
+
         departmentRepository.delete(existingDepartment);
         LOGGER.info("Deleted Department: {}", existingDepartment);
         return new ApiResponse<>(true, "Department deleted successfully", null);
@@ -147,6 +146,8 @@ public class DepartmentServiceImpl implements DepartmentService {
      */
     @Override
     public ApiResponse<Boolean> departmentExists(Long id) {
+        Objects.requireNonNull(id, "Department ID must not be null");
+
         boolean exists = departmentRepository.existsById(id);
         return new ApiResponse<>(true, "Department with ID " + id + " exists", exists);
     }
@@ -159,20 +160,20 @@ public class DepartmentServiceImpl implements DepartmentService {
      */
     @Override
     public ApiResponse<List<EmployeeResponseDTO>> findEmployeesByDepartmentName(String name) {
+        Objects.requireNonNull(name, "Department name must not be null");
+
         Department department = departmentRepository.findByName(name)
                 .orElseThrow(() -> new DepartmentNotFoundException("Department not found with name: " + name));
 
         try {
             ApiResponse<List<EmployeeResponseDTO>> apiResponse = employeeClient.findEmployeesByDepartmentId(department.getId());
 
-            // if apiResponse success is false, throw an exception
             if (!apiResponse.isSuccess() || apiResponse.getData() == null) {
-                throw new RuntimeException("Error occurred while retrieving employees in department: " + name, null);
+                throw new ServiceUnavailableException("Error occurred while retrieving employees in department: " + name);
             }
 
             List<EmployeeResponseDTO> employeesList = apiResponse.getData();
 
-            // If no employees are found, handle the scenario gracefully
             if (employeesList.isEmpty()) {
                 return new ApiResponse<>(true, "No employees found in department: " + name, null);
             }
@@ -180,8 +181,6 @@ public class DepartmentServiceImpl implements DepartmentService {
             return new ApiResponse<>(true, "Employees retrieved successfully", employeesList);
         } catch (FeignException.NotFound e) {
             throw new EmployeesNotFoundException("No employees found in department: " + name);
-        } catch (FeignException e) {
-            throw new ServiceUnavailableException("Error occurred while retrieving employees in department: " + name);
         }
     }
 }

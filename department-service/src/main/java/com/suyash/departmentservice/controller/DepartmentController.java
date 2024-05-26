@@ -41,9 +41,8 @@ public class DepartmentController {
     }
 
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public ApiResponse<Void> deleteDepartment(@PathVariable Long id) {
-        return departmentService.deleteDepartment(id);
+    public ResponseEntity<ApiResponse<Void>> deleteDepartment(@PathVariable Long id) {
+        return ResponseEntity.ok(departmentService.deleteDepartment(id));
     }
 
     @GetMapping("/employees/{name}")

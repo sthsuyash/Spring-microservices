@@ -8,6 +8,9 @@ import lombok.NoArgsConstructor;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * A department entity.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
