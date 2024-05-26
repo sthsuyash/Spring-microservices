@@ -6,6 +6,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * A DTO representing a review response.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

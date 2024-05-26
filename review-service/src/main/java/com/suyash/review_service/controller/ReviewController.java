@@ -40,9 +40,8 @@ public class ReviewController {
     }
 
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public ApiResponse<Void> deleteReview(@PathVariable Long id) {
-        return reviewService.deleteReview(id);
+    public ResponseEntity<ApiResponse<Void>> deleteReview(@PathVariable Long id) {
+        return ResponseEntity.ok(reviewService.deleteReview(id));
     }
 
     @GetMapping("/average-rating")
