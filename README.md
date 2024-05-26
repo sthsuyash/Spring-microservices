@@ -7,27 +7,27 @@ This project implements a microservice architecture using Spring Boot applicatio
 ## Features
 
 - **Microservice Architecture**: Spring Boot applications following microservice patterns.
-- **Gateway**: A gateway server to route requests and implement a load balancer.
-- **Discovery & Config Servers**: Service discovery and centralized configuration management.
-- **Inter-Service Communication**: REST API calls between microservices.
+- **Gateway**: A gateway server to route requests and implement a load balancer using Spring Cloud Gateway.
+- **Discovery & Config Servers**: Service discovery and centralized configuration management using Eureka and Spring Cloud Config.
+- **Inter-Service Communication**: REST API calls between microservices using the OpenFeign client.
 - **RabbitMQ Integration**: Message producer and consumer setup using RabbitMQ.
-- **Spring Security**: Basic authentication with user details stored in a database.
+- **Spring Security**: Basic authentication with user details stored in a database using Spring Security.
 - **Zipkin**: Distributed tracing with Zipkin.
-- **Docker & Docker Compose**: Containerized applications with Docker and Docker Compose.
-
-## API Documentation
-
-The API documentation can be found at `https://documenter.getpostman.com/view/20437995/2sA3QpDZa7` or also the postman collection is provided in the root directory.
 
 ## Setup
 
 1. Clone the repository.
-2. Run the `docker-compose up` command in the root directory.
-3. Access the services at the following URLs:
-   - Gateway: `http://localhost:8080`
-   - Discovery Server: `http://localhost:8761`
+2. Run the `docker-compose up` command in the root directory for the required dependencies.
+3. Run the microservices.
+4. Access the services at the following URLs:
+   - Gateway: `http://localhost:8084`
+   - Discovery/Eureka Server: `http://localhost:8761`
    - Config Server: `http://localhost:8888`
    - Zipkin Server: `http://localhost:9411`
    - RabbitMQ: `http://localhost:15672` (username: `guest`, password: `guest`)
-   - Eureka Client: `http://localhost:8081`
-   - Config Client: `http://localhost:8082`
+
+*All the apis are to be consumed from the gateway server.*
+
+## API Documentation
+
+The API documentation can be found oneline at <https://documenter.getpostman.com/view/20437995/2sA3QpDZa7> or also the [postman collection](Spring%20microservice%20APIs.postman_collection.json) is provided in the root directory. Import the collection in Postman to test the APIs.
