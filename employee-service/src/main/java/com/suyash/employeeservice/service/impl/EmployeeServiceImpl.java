@@ -14,10 +14,11 @@ import com.suyash.employeeservice.model.Employee;
 import com.suyash.employeeservice.repository.EmployeeRepository;
 import com.suyash.employeeservice.service.EmployeeService;
 import com.suyash.employeeservice.exception.DepartmentNotFoundException;
-import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import com.suyash.employeeservice.util.Helper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -25,13 +26,15 @@ import java.util.stream.Collectors;
 /**
  * Implementation of the EmployeeService interface.
  */
-@Component
+@Service
 public class EmployeeServiceImpl implements EmployeeService {
     private static final Logger LOGGER = LoggerFactory.getLogger(EmployeeServiceImpl.class);
+
     private final EmployeeRepository employeeRepository;
     private final EmployeeMapper employeeMapper;
     private final DepartmentClient departmentClient;
     private final ReviewClient reviewClient;
+    private final Helper helper;
 
     /**
      * Constructor for EmployeeServiceImpl.
@@ -40,17 +43,20 @@ public class EmployeeServiceImpl implements EmployeeService {
      * @param employeeMapper     The EmployeeMapper for mapping entities and DTOs
      * @param departmentClient   The DepartmentClient for making requests to the department service
      * @param reviewClient       The ReviewClient for making requests to the review service
+     * @param helper             The Helper class for utility methods
      */
-    public EmployeeServiceImpl(
-            EmployeeRepository employeeRepository,
-            EmployeeMapper employeeMapper,
-            ReviewClient reviewClient,
-            DepartmentClient departmentClient
+    @Autowired
+    public EmployeeServiceImpl(EmployeeRepository employeeRepository,
+                               EmployeeMapper employeeMapper,
+                               DepartmentClient departmentClient,
+                               ReviewClient reviewClient,
+                               Helper helper
     ) {
         this.employeeRepository = employeeRepository;
         this.employeeMapper = employeeMapper;
-        this.reviewClient = reviewClient;
         this.departmentClient = departmentClient;
+        this.reviewClient = reviewClient;
+        this.helper = helper;
     }
 
     /**
@@ -60,9 +66,10 @@ public class EmployeeServiceImpl implements EmployeeService {
      */
     @Override
     public ApiResponse<List<EmployeeResponseDTO>> findAllEmployees(Long departmentId) {
-        // if departmentId is provided, filter employees by department
+        List<EmployeeResponseDTO> employees;
+
         if (departmentId != null) {
-            List<EmployeeResponseDTO> employees = employeeRepository.findByDepartmentId(departmentId)
+            employees = employeeRepository.findByDepartmentId(departmentId)
                     .stream()
                     .map(employeeMapper::mapToEmployeeResponseDTO)
                     .collect(Collectors.toList());
@@ -71,26 +78,21 @@ public class EmployeeServiceImpl implements EmployeeService {
                 LOGGER.info("No employees found for department with id: {}", departmentId);
                 return new ApiResponse<>(true, "No employees found", null);
             }
+        } else {
+            employees = employeeRepository.findAll()
+                    .stream()
+                    .map(employeeMapper::mapToEmployeeResponseDTO)
+                    .collect(Collectors.toList());
 
-            LOGGER.info("Retrieved Employees: {}", employees);
-            return new ApiResponse<>(true, "Employees retrieved successfully", employees);
-        }
-
-        // if departmentId is not provided, retrieve all employees
-        List<EmployeeResponseDTO> employees = employeeRepository.findAll()
-                .stream()
-                .map(employeeMapper::mapToEmployeeResponseDTO)
-                .collect(Collectors.toList());
-
-        if (employees.isEmpty()) {
-            LOGGER.info("No employees found");
-            return new ApiResponse<>(true, "No employees found", null);
+            if (employees.isEmpty()) {
+                LOGGER.info("No employees found");
+                return new ApiResponse<>(true, "No employees found", null);
+            }
         }
 
         LOGGER.info("Retrieved Employees: {}", employees);
         return new ApiResponse<>(true, "Employees retrieved successfully", employees);
     }
-
 
     /**
      * Creates a new employee.
@@ -100,23 +102,12 @@ public class EmployeeServiceImpl implements EmployeeService {
      */
     @Override
     public ApiResponse<EmployeeResponseDTO> createEmployee(EmployeeRequestDTO employeeRequestDTO) {
-        // check if the employee already exists
         if (employeeRepository.existsByEmail(employeeRequestDTO.getEmail())) {
             throw new EmailAlreadyExistsException("Employee already exists with email: " + employeeRequestDTO.getEmail());
         }
 
-        // check if the department exists
-        ApiResponse<Boolean> departmentExistsResponse = departmentClient.departmentExists(employeeRequestDTO.getDepartmentId());
+        helper.validateDepartmentExists(employeeRequestDTO.getDepartmentId());
 
-        if (!departmentExistsResponse.isSuccess()) {
-            throw new DepartmentNotFoundException("Error occurred while checking if department exists");
-        }
-
-        if (!departmentExistsResponse.getData()) {
-            throw new DepartmentNotFoundException("Department not found with id: " + employeeRequestDTO.getDepartmentId());
-        }
-
-        // create the employee
         Employee employee = new Employee(
                 employeeRequestDTO.getFirstName(),
                 employeeRequestDTO.getLastName(),
@@ -138,13 +129,9 @@ public class EmployeeServiceImpl implements EmployeeService {
      * @return ApiResponse containing the retrieved EmployeeResponseDTO object
      */
     @Override
-    @RateLimiter(name = "default", fallbackMethod = "defaultFallback")
     public ApiResponse<EmployeeResponseDTO> findEmployeeById(Long id) {
         Employee employee = employeeRepository.findById(id)
-                .orElseThrow(() -> {
-                    LOGGER.error("Employee not found with id: {}", id);
-                    return new EmployeeNotFoundException("Employee not found with id: " + id);
-                });
+                .orElseThrow(() -> new EmployeeNotFoundException("Employee not found with id: " + id));
 
         LOGGER.info("Retrieved Employee: {}", employee);
         EmployeeResponseDTO responseDTO = employeeMapper.mapToEmployeeResponseDTO(employee);
@@ -159,26 +146,11 @@ public class EmployeeServiceImpl implements EmployeeService {
      * @return ApiResponse containing the updated EmployeeResponseDTO object
      */
     @Override
-    @RateLimiter(name = "default", fallbackMethod = "defaultFallback")
     public ApiResponse<EmployeeResponseDTO> updateEmployee(Long id, EmployeeRequestDTO employeeRequestDTO) {
         Employee existingEmployee = employeeRepository.findById(id)
-                .orElseThrow(() -> {
-                    LOGGER.error("Employee not found with id: {}", id);
-                    return new EmployeeNotFoundException("Employee not found with id: " + id);
-                });
+                .orElseThrow(() -> new EmployeeNotFoundException("Employee not found with id: " + id));
 
-        // check if the department exists
-        ApiResponse<Boolean> departmentExistsResponse = departmentClient.departmentExists(employeeRequestDTO.getDepartmentId());
-
-        if (!departmentExistsResponse.isSuccess()) {
-            LOGGER.error("Error occurred while checking if department exists: {}", departmentExistsResponse.getMessage());
-            throw new ResourceNotFoundException("Error occurred while checking if department exists");
-        }
-
-        if (!departmentExistsResponse.getData()) {
-            LOGGER.error("Department not found with id: {}", employeeRequestDTO.getDepartmentId());
-            throw new DepartmentNotFoundException("Department not found with id: " + employeeRequestDTO.getDepartmentId());
-        }
+        helper.validateDepartmentExists(employeeRequestDTO.getDepartmentId());
 
         existingEmployee.setFirstName(employeeRequestDTO.getFirstName());
         existingEmployee.setLastName(employeeRequestDTO.getLastName());
@@ -201,10 +173,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public ApiResponse<Void> updateEmployeeRating(ReviewMessageDTO reviewMessageDTO) {
         Employee existingEmployee = employeeRepository.findById(reviewMessageDTO.getEmployeeId())
-                .orElseThrow(() -> {
-                    LOGGER.error("Employee not found with id: {}", reviewMessageDTO.getEmployeeId());
-                    return new EmployeeNotFoundException("Employee not found with id: " + reviewMessageDTO.getEmployeeId());
-                });
+                .orElseThrow(() -> new EmployeeNotFoundException("Employee not found with id: " + reviewMessageDTO.getEmployeeId()));
 
         ApiResponse<Double> apiResponse = reviewClient.getAverageRating(reviewMessageDTO.getEmployeeId());
         if (!apiResponse.isSuccess()) {
@@ -229,10 +198,8 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public ApiResponse<Void> deleteEmployee(Long id) {
         Employee existingEmployee = employeeRepository.findById(id)
-                .orElseThrow(() -> {
-                    LOGGER.error("Employee not found with id: {}", id);
-                    return new EmployeeNotFoundException("Employee not found with id: " + id);
-                });
+                .orElseThrow(() -> new EmployeeNotFoundException("Employee not found with id: " + id));
+
         employeeRepository.delete(existingEmployee);
         LOGGER.info("Deleted Employee: {}", existingEmployee);
         return new ApiResponse<>(true, "Employee deleted successfully", null);
@@ -247,6 +214,11 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public ApiResponse<Boolean> existsById(Long id) {
         boolean exists = employeeRepository.existsById(id);
-        return new ApiResponse<>(true, "Employee exists", exists);
+        if (!exists) {
+            LOGGER.info("Employee not found with id: {}", id);
+            return new ApiResponse<>(true, "Employee not found", null);
+        }
+        LOGGER.info("Employee exists with id: {}", id);
+        return new ApiResponse<>(true, "Employee exists", null);
     }
 }

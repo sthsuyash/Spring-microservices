@@ -6,6 +6,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * A DTO class that represents an employee request.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

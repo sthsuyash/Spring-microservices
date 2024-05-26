@@ -5,6 +5,10 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * A DTO class that represents a review message.
+ * External Review object.
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

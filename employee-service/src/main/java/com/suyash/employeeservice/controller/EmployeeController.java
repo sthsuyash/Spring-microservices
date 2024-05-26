@@ -40,13 +40,12 @@ public class EmployeeController {
     }
 
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public ApiResponse<Void> deleteEmployee(@PathVariable Long id) {
-        return employeeService.deleteEmployee(id);
+    public ResponseEntity<ApiResponse<Void>> deleteEmployee(@PathVariable Long id) {
+        return ResponseEntity.ok(employeeService.deleteEmployee(id));
     }
 
     @GetMapping("/exists/{id}")
-    public ApiResponse<Boolean> existsById(@PathVariable Long id) {
-        return employeeService.existsById(id);
+    public ResponseEntity<ApiResponse<Boolean>> existsById(@PathVariable Long id) {
+        return ResponseEntity.ok(employeeService.existsById(id));
     }
 }

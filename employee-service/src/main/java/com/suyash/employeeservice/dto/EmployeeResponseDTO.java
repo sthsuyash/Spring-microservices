@@ -7,6 +7,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
+/**
+ * A DTO class that represents an employee.
+ * External Employee object.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

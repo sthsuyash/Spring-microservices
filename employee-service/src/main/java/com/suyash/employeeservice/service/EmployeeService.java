@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-@Service
 public interface EmployeeService {
     ApiResponse<List<EmployeeResponseDTO>> findAllEmployees(Long departmentId);
 
